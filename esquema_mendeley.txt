@@ -1,0 +1,379 @@
+CREATE TABLE Documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid VARCHAR NOT NULL UNIQUE, 
+    pages VARCHAR,
+    month INT, 
+    originalPublication VARCHAR, 
+    series VARCHAR, 
+    seriesNumber VARCHAR, 
+    sections VARCHAR, 
+    seriesEditor VARCHAR, 
+    reviewedArticle VARCHAR, 
+    revisionNumber VARCHAR, 
+    publisher VARCHAR, 
+    reprintEdition VARCHAR,
+    internationalTitle VARCHAR,
+    internationalUserType VARCHAR,
+    internationalAuthor VARCHAR,
+    internationalNumber VARCHAR,
+    hideFromMendeleyWebIndex INT,
+    institution VARCHAR,
+    genre VARCHAR,
+    length VARCHAR,
+    medium VARCHAR,
+    lastUpdate VARCHAR,
+    legalStatus VARCHAR,
+    issue VARCHAR,
+    language VARCHAR,
+    isbn VARCHAR,
+    issn VARCHAR,
+    codeSection VARCHAR,
+    codeVolume VARCHAR,
+    code VARCHAR,
+    codeNumber VARCHAR,
+    citationKey VARCHAR,
+    city VARCHAR,
+    chapter VARCHAR,
+    doi VARCHAR,
+    edition VARCHAR,
+    day INT,
+    department VARCHAR,
+    country VARCHAR,
+    dateAccessed VARCHAR,
+    committee VARCHAR,
+    counsel VARCHAR,
+    note VARCHAR,
+    importer VARCHAR,
+    modified INT,
+    abstract VARCHAR,
+    added INT,
+    applicationNumber VARCHAR,
+    arxivId VARCHAR,
+    advisor VARCHAR,
+    articleColumn VARCHAR,
+    title VARCHAR,
+    privacy VARCHAR,
+    read INT,
+    type VARCHAR,
+    deletionPending INT,
+    favourite INT,
+    confirmed INT,
+    deduplicated INT,
+    volume VARCHAR,
+    year INT,
+    userType VARCHAR,
+    sourceType VARCHAR,
+    session VARCHAR,
+    shortTitle VARCHAR,
+    publication VARCHAR,
+    publicLawNumber VARCHAR,
+    pmid BIGINT,
+    owner VARCHAR)CREATE TABLE sqlite_sequence(name,seq)
+
+CREATE TABLE DocumentContributors(
+    id INTEGER PRIMARY KEY,
+    documentId INTEGER NOT NULL,
+    contribution VARCHAR NOT NULL,
+    firstNames VARCHAR,
+    lastName VARCHAR NOT NULL)
+
+CREATE TABLE DocumentFiles(
+    documentId INTEGER NOT NULL,
+    hash CHAR[40] NOT NULL,
+    unlinked BOOLEAN NOT NULL,
+    downloadRestricted BOOLEAN NOT NULL DEFAULT 0,
+    remoteFileUuid CHAR[38] NOT NULL DEFAULT '')
+
+CREATE TABLE Files(
+    hash CHAR[40] PRIMARY KEY,
+    localUrl VARCHAR NOT NULL)
+
+CREATE TABLE DocumentFolders(
+    documentId INTEGER NOT NULL,
+    folderId INTEGER NOT NULL,
+    status VARCHAR NOT NULL,
+    PRIMARY KEY(documentId, folderId))
+
+CREATE TABLE DocumentKeywords(
+    documentId INTEGER NOT NULL,
+    keyword VARCHAR NOT NULL,
+    PRIMARY KEY(documentId, keyword))
+
+CREATE TABLE DocumentReferences(
+    documentId INTEGER NOT NULL,
+    referencedDocumentId INTEGER NOT NULL, PRIMARY KEY(documentId, referencedDocumentId))
+
+CREATE TABLE DocumentTags(
+    documentId INTEGER NOT NULL,
+    tag VARCHAR NOT NULL,
+    PRIMARY KEY(documentId, tag))
+
+CREATE TABLE DocumentUrls(
+    documentId INTEGER NOT NULL,
+    position INTEGER NOT NULL,
+    url VARCHAR NOT NULL,
+    PRIMARY KEY(documentId, position))
+
+CREATE TABLE Folders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    uuid VARCHAR UNIQUE NULL, /* This will be null for already-synced folders
+	                             on upgrade from MD <= 0.9.9.  All new folders
+	                             and existing folders after first sync should have
+	                             a UUID */
+    name VARCHAR NOT NULL,
+    parentId INTEGER NULL,
+    access VARCHAR NOT NULL,
+    syncPolicy VARCHAR NOT NULL,
+    downloadFilesPolicy INTEGER NOT NULL,
+    uploadFilesPolicy INTEGER NOT NULL, /* Deprecated.  Replaced by syncPolicy */
+    publicUrl VARCHAR,
+    description VARCHAR,
+    creatorName VARCHAR,
+    creatorProfileUrl VARCHAR)
+
+CREATE TABLE FileHighlights (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    author VARCHAR,
+    uuid CHAR[38] NOT NULL UNIQUE,
+    documentId INTEGER NOT NULL,
+    fileHash CHAR[40] NOT NULL,
+    createdTime VARCHAR NOT NULL,
+    unlinked BOOLEAN NOT NULL,
+    color VARCHAR DEFAULT NULL,
+    profileUuid VARCHAR DEFAULT NULL,
+    FOREIGN KEY (documentId) REFERENCES Documents(id))
+
+CREATE TABLE FileHighlightRects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    highlightId INTEGER NOT NULL,
+    page INTEGER NOT NULL,
+    x1 FLOAT NOT NULL,
+    y1 FLOAT NOT NULL,
+    x2 FLOAT NOT NULL,
+    y2 FLOAT NOT NULL,
+    FOREIGN KEY (highlightId) REFERENCES FileHighlights(id))
+
+CREATE TABLE FileNotes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    author VARCHAR,
+    uuid CHAR[38] NOT NULL UNIQUE,
+    documentId INTEGER NOT NULL,
+    fileHash CHAR[40] NOT NULL,
+    page INTEGER NOT NULL,
+    x FLOAT NOT NULL,
+    y FLOAT NOT NULL,
+    note VARCHAR NOT NULL,
+    modifiedTime VARCHAR NOT NULL,
+    createdTime VARCHAR NOT NULL,
+    unlinked BOOLEAN NOT NULL,
+    baseNote VARCHAR, /* last-synced note text */
+    color VARCHAR DEFAULT NULL,
+    profileUuid VARCHAR DEFAULT NULL,
+    FOREIGN KEY (documentId) REFERENCES Documents(id))
+
+CREATE TABLE DocumentNotes (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	uuid CHAR[38] NOT NULL UNIQUE,
+	text VARCHAR NOT NULL,
+	documentId INTEGER NOT NULL UNIQUE,
+	unlinked BOOLEAN NOT NULL,
+	baseNote VARCHAR, /* last-synced note text */
+	FOREIGN KEY (documentId) REFERENCES Documents(id))
+
+CREATE TABLE ZoteroLastSync (
+    time INTEGER NOT NULL)
+
+CREATE TABLE DocumentZotero (
+    documentId INTEGER PRIMARY KEY,
+    zoteroID INTEGER NOT NULL,
+    lastSyncTime INTEGER NOT NULL)
+
+CREATE TABLE Stats (
+    Action CHAR(50) NOT NULL PRIMARY KEY,
+    Counter INTEGER NOT NULL)
+
+CREATE TABLE Settings (
+    key VARCHAR NOT NULL PRIMARY KEY,
+    value NULL)
+
+CREATE TABLE EventLog (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type VARCHAR NOT NULL,
+    timestamp INTEGER NOT NULL,
+    sent BOOLEAN NOT NULL)
+
+CREATE TABLE EventAttributes (
+    eventId INTEGER,
+    attribute VARCHAR NOT NULL,
+    value VARCHAR NOT NULL,
+    PRIMARY KEY (eventId, attribute),
+    FOREIGN KEY (eventId) REFERENCES EventLog(id))
+
+CREATE TABLE FileViewStates (
+    hash CHAR[40] PRIMARY KEY UNIQUE,
+    positionx FLOAT NOT NULL,
+    positiony FLOAT NOT NULL,
+    pagenumber INTEGER NOT NULL,
+    zoommode INTEGER NOT NULL,
+    zoomfactor FLOAT NOT NULL,
+    rotation FLOAT NOT NULL)
+
+CREATE TABLE NotDuplicates (
+       uuid1 CHAR[64] NOT NULL,
+       uuid2 CHAR[64] NOT NULL,
+       PRIMARY KEY (uuid1, uuid2))
+
+CREATE TABLE HtmlLocalStorage (
+       origin VARCHAR NOT NULL,
+       key VARCHAR NOT NULL,
+       value VARCHAR NULL,
+       PRIMARY KEY (origin, key))
+
+CREATE TABLE ImportHistory (
+       path VARCHAR NOT NULL PRIMARY KEY,
+       importCount INTEGER NOT NULL,
+       ignore BOOLEAN NOT NULL)
+
+CREATE TABLE LastReadStates (	
+	documentId INTEGER NOT NULL,
+	hash VARCHAR NOT NULL,
+	page INTEGER NOT NULL,
+	horizontalPosition FLOAT,
+	verticalPosition FLOAT NOT NULL,
+	zoomMode INTEGER,
+	zoomFactor FLOAT,
+	rotation INTEGER,
+	status VARCHAR,
+	timestamp VARCHAR,
+	PRIMARY KEY (documentId, hash),
+	FOREIGN KEY (documentId) REFERENCES Documents(id))
+
+CREATE TABLE Profiles
+(
+        uuid VARCHAR NOT NULL UNIQUE,
+        firstName VARCHAR,
+        lastName VARCHAR,
+        displayName VARCHAR,
+        link VARCHAR,
+        clientData TEXT,
+        photo BLOB,
+        lastsync TEXT,
+        isSelf INTEGER NOT NULL,
+        PRIMARY KEY(uuid))
+
+CREATE TABLE RemoteDocuments(
+	documentId INTEGER,
+	remoteId INTEGER,   /* Deprecated. Was part of the XML API. Replaced by remoteUuid */
+	remoteUuid VARCHAR UNIQUE NULL,
+	groupId INTEGER NOT NULL,
+	status VARCHAR NOT NULL,
+	inTrash BOOLEAN NOT NULL,
+	PRIMARY KEY(documentId,remoteUuid))
+
+CREATE TABLE Groups (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	remoteId INTEGER,
+    remoteUuid VARCHAR UNIQUE NULL,
+	name VARCHAR,
+	groupType VARCHAR NOT NULL,
+	status VARCHAR NOT NULL,
+	access VARCHAR NOT NULL,
+	syncPolicy VARCHAR NOT NULL,
+	downloadFilesPolicy INTEGER NOT NULL,
+	uploadFilesPolicy INTEGER NOT NULL, /* Deprecated.  Replaced by syncPolicy */
+	publicUrl VARCHAR,
+	isOwner BOOL NOT NULL,
+	isReadOnly BOOLEAN NOT NULL,
+	isPrivate BOOLEAN NOT NULL,
+	iconName VARCHAR NULL)
+
+CREATE TABLE RemoteFolders (
+	folderId INTEGER PRIMARY KEY,
+    remoteUuid VARCHAR UNIQUE NULL,
+	remoteId INTEGER,       /* Deprecated. Use remoteUuid */
+	parentRemoteId INTEGER, /* Deprecated. No longer used after folder hierarchy
+	                           API changes in MD > 0.9.9
+	                         */
+	groupId INTEGER,
+	status VARCHAR NOT NULL,
+	version INTEGER NOT NULL)
+
+CREATE TABLE DocumentDetailsBase (
+	documentId INTEGER NOT NULL,
+	fieldId INTEGER NOT NULL,
+	originalValue VARCHAR,
+	conflictValue VARCHAR,
+	PRIMARY KEY(documentId,fieldId))
+
+CREATE TABLE DocumentFields (
+	fieldId INTEGER PRIMARY KEY AUTOINCREMENT,
+	name VARCHAR NOT NULL)
+
+CREATE TABLE DocumentVersion (
+	documentId INTEGER PRIMARY KEY,
+	version VARCHAR)
+
+CREATE TABLE RemoteFileHighlights (
+	uuid CHAR[38] PRIMARY KEY,
+	status VARCHAR NOT NULL,
+	revision INTEGER NOT NULL)
+
+CREATE TABLE RemoteFileNotes (
+	uuid CHAR[38] PRIMARY KEY,
+	status VARCHAR NOT NULL,
+	revision INTEGER NOT NULL)
+
+CREATE TABLE RemoteDocumentNotes (
+	uuid CHAR[38] PRIMARY KEY,
+	status VARCHAR NOT NULL,
+	revision INTEGER NOT NULL)
+
+CREATE TABLE DocumentFoldersBase (
+	documentId INTEGER NOT NULL,
+	folderId INTEGER NOT NULL,
+	PRIMARY KEY (documentId,folderId))
+
+CREATE TABLE Resources (
+	id VARCHAR PRIMARY KEY,
+	type VARCHAR NOT NULL,
+	iconData BLOB)
+
+CREATE TABLE CanonicalDocuments (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	uuid VARCHAR NOT NULL UNIQUE,
+	catalogUrl VARCHAR,
+	downloadUrl VARCHAR,
+	lastModified INTEGER NOT NULL)
+
+CREATE TABLE DocumentCanonicalIds (
+	documentId INTEGER PRIMARY KEY,
+	canonicalId INTEGER NOT NULL,
+	timestamp INTEGER NOT NULL)
+
+CREATE TABLE SyncTokens (
+    groupId INTEGER NOT NULL DEFAULT 0,
+    type VARCHAR NOT NULL,
+    token VARCHAR NOT NULL,
+    PRIMARY KEY (groupId, type))
+
+CREATE TABLE SchemaVersion (key VARCHAR PRIMARY KEY, value INTEGER NOT NULL)
+CREATE TABLE RunsSinceLastCleanup (time DATETIME NOT NULL)
+CREATE TABLE DataCleaner (version INT NOT NULL)
+CREATE INDEX DocumentContributors_DocumentIdIndex ON DocumentContributors (documentId)
+CREATE INDEX DocumentFiles_DocumentIdIndex ON DocumentFiles (documentId)
+CREATE INDEX DocumentFiles_HashIndex ON DocumentFiles (hash)
+CREATE INDEX DocumentReferences_DocumentIdIndex ON DocumentReferences(documentId)
+CREATE INDEX DocumentReferences_ReferencedDocumentIdIndex ON DocumentReferences(referencedDocumentId)
+CREATE INDEX FileHighlights_DocumentIdIndex ON FileHighlights(documentId)
+CREATE INDEX FileHighlights_FileHashIndex ON FileHighlights(fileHash)
+CREATE INDEX FileHighlightRects_highlightId ON FileHighlightRects(highlightId)
+CREATE INDEX FileNotes_DocumentIdIndex ON FileNotes(documentId)
+CREATE INDEX FileNotes_FileHashIndex ON FileNotes(fileHash)
+CREATE INDEX DocumentNotes_DocumentIdIndex ON DocumentNotes(documentId)
+CREATE INDEX RemoteDocuments_DocumentIdIndex ON RemoteDocuments(documentId)
+CREATE INDEX DocumentDetailsBase_DocumentIdIndex ON DocumentDetailsBase(documentId)
+CREATE INDEX DocumentFoldersBase_DocumentIdIndex ON DocumentFoldersBase(documentId)
+CREATE INDEX DocumentCanonicalIds_CanonicalIdIndex ON DocumentCanonicalIds(canonicalId)
+CREATE INDEX SyncTokens_GroupIdIndex ON SyncTokens(groupId)
+CREATE INDEX SyncTokens_TypeIndex ON SyncTokens(type)
+CREATE VIEW FileReferenceCountsView AS SELECT hash, COUNT(hash) AS referenceCount FROM DocumentFiles GROUP BY hash
