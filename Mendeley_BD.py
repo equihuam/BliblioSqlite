@@ -158,16 +158,17 @@ class mendeleyRescue:
         for i in range(0, 10):
             print(all_docs[i])
 
+        print()
+
         updated_title = {"title": "", "id": None}
-        for doc in all_docs[0:3]:
-            if doc["title"][0] in ["'", "(", "[", "{", '"']:
+        for doc in all_docs[0:100]:
+            if doc["title"][0] in ["'", "(", "[", "{", '"', " ", "."]:
                 updated_title.update({"title": doc["title"][0] + doc["title"][1].capitalize() + doc["title"][2:],
                                       "id": doc["id"]})
             else:
                 updated_title.update({"title": doc["title"].capitalize(), "id": doc["id"]})
+            print(updated_title["title"])
 
-
-        print(updated_title["title"])
     #                 {"title": "A Neural Network Playground", "id": 42197}]
     # for dato in nuevos_datos:
     #     docs_inecol_actualiza = conecta_bd.execute("UPDATE Documents SET title =:title WHERE id = :id ", dato)
