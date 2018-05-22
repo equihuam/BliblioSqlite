@@ -266,18 +266,18 @@ with open("Mendeley_docs_en_{}.txt".format(grupo), "wb") as f:
 #%% Update directory to hold file archive
 listaArchivos = mendeley.archivos()
 simp_arch_dir = list(set([f["dir"] for f in listaArchivos]))
-dirs = {}
-if len(dirs) > 1:
+if len(simp_arch_dir) > 1:
+    dirs = {"newPath": "", "oldPath": ""}
     for f in simp_arch_dir:
         if not "AppData" in f:
-            dirs = {"newPath": f.replace(" ", "%20"), "oldPath": ""}
+            dirs["newPath"] = f.replace(" ", "%20")
         else:
             dirs["oldPath"] = f.replace(" ", "%20")
 
     mendeley.fileArchive(dirs)
 
 #%% Actualización de los títulos para usar minúsculas con inicial mayúscula
-mendeley.update_titles()
+#mendeley.update_titles()
 
 #%% Finish processing
 mendeley.close()
