@@ -1,7 +1,7 @@
 #%% Bibliotecas y funciones
 import sqlite3
 import urllib.request
-import re
+import argparse
 from os import path, listdir
 
 
@@ -176,108 +176,130 @@ class mendeleyRescue:
         self.connect.close()
 
 
-#%% Main ---------------
-mendeley = mendeleyRescue()
-conecta_bd = mendeley.connect
-mendeley.mendeley_schema()
+# Main ---------------
+if __name__ == '__main__':
+    commLine = argparse.ArgumentParser(description="Diagnostics and general maintenance of Mendeley database")
+    commLine.add_argument("-D", "--docs", help="Collection of downloaded documents",
+                          required=False, action="store_true")
+    commLine.add_argument("-A", "--authors", help="List of contributors in document collection",
+                          required=False, action="store_true")
+    commLine.add_argument("-F", "--full", help="List of all references in the collection",
+                          required=False, action="store_true")
+    commLine.add_argument("-P", "--duplicates", help="References among groups and potential duplicates",
+                          required=False, action="store_true")
+    commLine.add_argument("-g", "--group", help="Collection of documents in specified group",
+                          required=False, type=str, default="My library")
+    commLine.add_argument("-O", "--old", help="Old download location to be changed",
+                          required=False, type=str)
+    commLine.add_argument("-N", "--new", help="New download location to be changed",
+                          required=False, type=str)
+    commLine.add_argument("-T", "--titles", help="Apply single rule to reference title: currently only upper initial",
+                          required=False, type=str)
+
+
+    args = commLine.parse_args()
+
+    mendeley = mendeleyRescue()
+    conecta_bd = mendeley.connect
+    mendeley.mendeley_schema()
 
 #%% Lista de documentos descargados
-listaArchivos = mendeley.archivos()
-simp_arch_dir = list(set([f["dir"].split("file:///")[1] for f in listaArchivos]))
+    listaArchivos = mendeley.archivos()
+    simp_arch_dir = list(set([f["dir"].split("file:///")[1] for f in listaArchivos]))
 
-with open("Mendeley_documentos_descargados.txt", "w", encoding="utf-8") as f:
-    f.writelines(["Documentos de Mendeley con archivos descargados en este equipo\n", "*"*63, "\n\n"])
+    with open("Mendeley_documentos_descargados.txt", "w", encoding="utf-8") as f:
+        f.writelines(["Documentos de Mendeley con archivos descargados en este equipo\n", "*"*63, "\n\n"])
 
-    f.writelines(["Los documentos están almacenados en:\n", "-"*37, "\n"])
-    for d in simp_arch_dir:
-        f.writelines([d, "\n"])
+        f.writelines(["Los documentos están almacenados en:\n", "-"*37, "\n"])
+        for d in simp_arch_dir:
+            f.writelines([d, "\n"])
 
-    f.writelines(["\n\nLista de documentos descargados:\n", "-"*32, "\n"])
-    for doc in listaArchivos:
-        f.writelines([doc["file"], "\n"])
+        f.writelines(["\n\nLista de documentos descargados:\n", "-"*32, "\n"])
+        for doc in listaArchivos:
+            f.writelines([doc["file"], "\n"])
 
 #%% Lista de autores
-listaAutores = mendeley.autores()
-listaAutores.sort()
+    listaAutores = mendeley.autores()
+    listaAutores.sort()
 
-with open("Mendeley_lista_autores.txt", "w", encoding="utf-8") as f:
-    f.writelines(["Lista de autores de los documentos en Mendeley\n", "*"*46, "\n\n"
-                  "Registros sospechosos:\n", "-"*22, "\n"])
-    for a in listaAutores:
-        if len(a.strip())> 50 or len(a.split())>5 or len(a.strip())<5 or (a.strip()[0] in ["(", "[", "{", "<"]):
+    with open("Mendeley_lista_autores.txt", "w", encoding="utf-8") as f:
+        f.writelines(["Lista de autores de los documentos en Mendeley\n", "*"*46, "\n\n"
+                      "Registros sospechosos:\n", "-"*22, "\n"])
+        for a in listaAutores:
+            if len(a.strip())> 50 or len(a.split())>5 or len(a.strip())<5 or (a.strip()[0] in ["(", "[", "{", "<"]):
+                f.writelines([a.strip(), "\n"])
+
+        f.writelines(["\n\nLista completa de autores:\n", "-"*26, "\n"])
+        for a in listaAutores:
             f.writelines([a.strip(), "\n"])
 
-    f.writelines(["\n\nLista completa de autores:\n", "-"*26, "\n"])
-    for a in listaAutores:
-        f.writelines([a.strip(), "\n"])
-
 #%% Lista de documentos en Mendeley
-documentos = mendeley.listDocs()
-# Archivo con la lista de todos los documentos
-with open("Mendeley_todos_los_titulos.txt", "w", encoding="utf-8") as f:
-    f.write("sec, id, title, year, deletionPending\n")
-    i = 0
-    for d in documentos:
-        i += 1
-        if d["year"] == None:
-            d["year"] = "sa"
-        else:
-            d["year"] = str(d["year"])
-        line = "{:5d}:, {:10d}, {:.60}, {:6}, {:5}\n".format(i, d["id"], d["title"], d["year"], d["deletionPending"])
-        f.write(line)
+    documentos = mendeley.listDocs()
+    # Archivo con la lista de todos los documentos
+    with open("Mendeley_todos_los_titulos.txt", "w", encoding="utf-8") as f:
+        f.write("sec, id, title, year, deletionPending\n")
+        i = 0
+        for d in documentos:
+            i += 1
+            if d["year"] == None:
+                d["year"] = "sa"
+            else:
+                d["year"] = str(d["year"])
+            line = "{:5d}:, {:10d}, {:.60}, {:6}, {:5}\n".format(i, d["id"], d["title"], d["year"], d["deletionPending"])
+            f.write(line)
 
 #%% Distribución de documentos entre los grupos y "My library"
-num_docs_grp = mendeley.numDocs()
-with open("Mendeley_duplicados.txt", "w") as f:
-    f.write("Número de documentos en la BD de Mendeley\n")
-    f.write("{:10}  {:5}  {:15}\n".format("Num docs", "gr_id", "gr_name"))
-    f.write("{:<50}\n".format("-" * 50))
-    for d in num_docs_grp:
-        f.write("{:10}  {:5}  {:15}\n".format(d["entries"], d["gr"], d["gr_name"]))
-    f.write("{:<50}\n".format("-" * 50))
+    num_docs_grp = mendeley.numDocs()
+    with open("Mendeley_duplicados.txt", "w") as f:
+        f.write("Número de documentos en la BD de Mendeley\n")
+        f.write("{:10}  {:5}  {:15}\n".format("Num docs", "gr_id", "gr_name"))
+        f.write("{:<50}\n".format("-" * 50))
+        for d in num_docs_grp:
+            f.write("{:10}  {:5}  {:15}\n".format(d["entries"], d["gr"], d["gr_name"]))
+        f.write("{:<50}\n".format("-" * 50))
 
-#%% Análisis de duplicados
-lista_duplicados = mendeley.dups(grupo=0)
+    # Análisis de duplicados
+    lista_duplicados = mendeley.dups(grupo=0)
 
-total = sum([r["entries"] for r in lista_duplicados])
-grupo = lista_duplicados[0]["gr_name"]
-if grupo is "":  # Si no hay grupo el documento es de "mi colección"
-    grupo = "My library"
+    total = sum([r["entries"] for r in lista_duplicados])
+    grupo = lista_duplicados[0]["gr_name"]
+    if grupo is "":  # Si no hay grupo el documento es de "mi colección"
+        grupo = "My library"
 
-with open("Mendeley_duplicados.txt", "a") as f:
-    f.write("\nEl total de duplicados en el grupo '{}' es = {}\n\n\n".format(grupo, total))
-    for d in lista_duplicados:
-        f.write("{entries}: {title:_<80.80} ({year})\n".format(**d))
+    with open("Mendeley_duplicados.txt", "a") as f:
+        f.write("\nEl total de duplicados en el grupo '{}' es = {}\n\n\n".format(grupo, total))
+        for d in lista_duplicados:
+            f.write("{entries}: {title:_<80.80} ({year})\n".format(**d))
 
 #%% Documentos en el grupo seleccionado
-titulos = mendeley.doc_grupo(grupo=0)
-grupo = titulos[0]["grp_name"]
-if grupo == "":
-    grupo = "My library"
-with open("Mendeley_docs_en_{}.txt".format(grupo), "wb") as f:
-    linea = " ".join(["Documentos en el grupo '{grupo}'\n".format(grupo=grupo),
-                      u"*" * 40, u"\n"]).encode("utf-8")
-    f.write(linea)
-    i = 0
-    for titulo in titulos:
-        i += 1
-        f.write("{:>4}: {: <120.120}\n".format(i, conjunciones_minuscula(titulo["title"])).encode("utf-8"))
+    titulos = mendeley.doc_grupo(grupo=0)
+    grupo = titulos[0]["grp_name"]
+    if grupo == "":
+        grupo = "My library"
+    with open("Mendeley_docs_en_{}.txt".format(grupo), "wb") as f:
+        linea = " ".join(["Documentos en el grupo '{grupo}'\n".format(grupo=grupo),
+                          u"*" * 40, u"\n"]).encode("utf-8")
+        f.write(linea)
+        i = 0
+        for titulo in titulos:
+            i += 1
+            f.write("{:>4}: {: <120.120}\n".format(i, conjunciones_minuscula(titulo["title"])).encode("utf-8"))
 
 #%% Update directory to hold file archive
-listaArchivos = mendeley.archivos()
-simp_arch_dir = list(set([f["dir"] for f in listaArchivos]))
-if len(simp_arch_dir) > 1:
-    dirs = {"newPath": "", "oldPath": ""}
-    for f in simp_arch_dir:
-        if not "AppData" in f:
-            dirs["newPath"] = f.replace(" ", "%20")
-        else:
-            dirs["oldPath"] = f.replace(" ", "%20")
+    listaArchivos = mendeley.archivos()
+    simp_arch_dir = list(set([f["dir"] for f in listaArchivos]))
+    if len(simp_arch_dir) > 1:
+        dirs = {"newPath": "", "oldPath": ""}
+        for f in simp_arch_dir:
+            if not "AppData" in f:
+                dirs["newPath"] = f.replace(" ", "%20")
+            else:
+                dirs["oldPath"] = f.replace(" ", "%20")
 
-    mendeley.fileArchive(dirs)
+        mendeley.fileArchive(dirs)
 
 #%% Actualización de los títulos para usar minúsculas con inicial mayúscula
-mendeley.update_titles()
+    mendeley.update_titles()
 
 #%% Finish processing
-mendeley.close()
+    mendeley.close()
