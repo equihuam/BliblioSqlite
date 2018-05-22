@@ -114,7 +114,6 @@ class mendeleyRescue:
 
         return candidatos_borrables
 
-
     def doc_grupo(self, grupo=0):
         docs_inecol = self.connect.execute(
             """
@@ -129,7 +128,6 @@ class mendeleyRescue:
         titulos = [t for t in docs_inecol]
         return titulos
 
-
     def autores(self):
         autores = self.connect.execute(
             """
@@ -140,7 +138,6 @@ class mendeleyRescue:
         listaAutores = list(set([" ".join([a["firstNames"], a["lastName"]]) for a in autores]))
         return listaAutores
 
-
     def archivos(self):
         archivos = self.connect.execute(
             """
@@ -148,54 +145,58 @@ class mendeleyRescue:
             FROM Files
             """)
 
-        listaArchivos = [(urllib.request.unquote(path.basename(a["file_path"])),
-                          urllib.request.unquote(path.dirname(a["file_path"])))
-                     for a in archivos if not a["file_path"] == ""]
+        listaArchivos = [{"file": urllib.request.unquote(path.basename(a["file_path"])),
+                          "dir": urllib.request.unquote(path.dirname(a["file_path"]))}
+                         for a in archivos if not a["file_path"] == ""]
         return listaArchivos
+
+    def fileArchive(self, dicPaths):
+        self.connect.execute(
+            """
+            UPDATE Files SET localUrl = REPLACE(localUrl, :oldPath, :newPath)
+            WHERE localUrl LIKE :oldPath;
+            """)
 
     def update_titles(self):
         all_docs = self.listDocs()
-        for i in range(0, 10):
-            print(all_docs[i])
-
-        print()
-
         updated_title = {"title": "", "id": None}
-        for doc in all_docs[0:100]:
-            if doc["title"][0] in ["'", "(", "[", "{", '"', " ", "."]:
-                updated_title.update({"title": doc["title"][0] + doc["title"][1].capitalize() + doc["title"][2:],
-                                      "id": doc["id"]})
+        for doc in all_docs:
+            if doc["title"][0] in ["'", "(", "[", "{", '"', " ", ".", "¿", "¡", "\u201c"]:
+                updated_title.update({"title": doc["title"][0] + doc["title"][1].capitalize() +
+                                               doc["title"][2:].lower(), "id": doc["id"]})
             else:
-                updated_title.update({"title": doc["title"].capitalize(), "id": doc["id"]})
-            print(updated_title["title"])
+                updated_title.update({"title": doc["title"].lower().capitalize(), "id": doc["id"]})
+            self.connect.execute("UPDATE Documents SET title =:title WHERE id = :id ", updated_title)
+        self.connect.commit()
 
-    #                 {"title": "A Neural Network Playground", "id": 42197}]
-    # for dato in nuevos_datos:
-    #     docs_inecol_actualiza = conecta_bd.execute("UPDATE Documents SET title =:title WHERE id = :id ", dato)
-    #
-    # conecta_bd.commit()
-    # conecta_bd.close()
+    def close(self):
+        self.connect.commit()
+        self.connect.close()
+
+
+
 
 
 # %% Main ---------------
 mendeley = mendeleyRescue()
 conecta_bd = mendeley.connect
-mendeley.mendeley_schema
+mendeley.mendeley_schema()
 
 #%% Lista de documentos descargados
 listaArchivos = mendeley.archivos()
-simp_arch_dir = set([f[1].split("file:///")[1] for f in listaArchivos])
+simp_arch_dir = list(set([f["dir"].split("file:///")[1] for f in listaArchivos]))
 
 with open("Mendeley_documentos_descargados.txt", "w", encoding="utf-8") as f:
     f.writelines(["Documentos de Mendeley con archivos descargados en este equipo\n", "*"*63, "\n\n"])
 
-    f.writelines(["Los adocumentos están almacenados en:\n", "-"*37, "\n"])
+    f.writelines(["Los documentos están almacenados en:\n", "-"*37, "\n"])
     for d in simp_arch_dir:
         f.writelines([d, "\n"])
+        print("file:///" + simp_arch_dir[0].replace(" ", "%20"))
 
     f.writelines(["\n\nLista de documentos descargados:\n", "-"*32, "\n"])
-    for (a, dir) in listaArchivos:
-        f.writelines([a, "\n"])
+    for doc in listaArchivos:
+        f.writelines([doc["file"], "\n"])
 
 # %% Lista de autores
 listaAutores = mendeley.autores()
@@ -265,4 +266,7 @@ with open("Mendeley_docs_en_{}.txt".format(grupo), "wb") as f:
         f.write("{:>4}: {: <120.120}\n".format(i, conjunciones_minuscula(titulo["title"])).encode("utf-8"))
 
 #%% Update
-mendeley.update_titles()
+#mendeley.update_titles()
+
+#%% Finish processing
+mendeley.close()
