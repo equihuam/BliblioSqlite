@@ -277,7 +277,7 @@ if len(simp_arch_dir) > 1:
     mendeley.fileArchive(dirs)
 
 #%% Actualización de los títulos para usar minúsculas con inicial mayúscula
-#mendeley.update_titles()
+mendeley.update_titles()
 
 #%% Finish processing
 mendeley.close()
