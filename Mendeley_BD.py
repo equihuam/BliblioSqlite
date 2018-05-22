@@ -38,7 +38,7 @@ class mendeleyRescue:
             self.connect = sqlite3.connect(self.mendeley_bd_path)
 
         except sqlite3.Error as e:
-                print(e)
+            print(e)
 
         # Prepara recuperación de registros a un diccionario {columna: valor}
         self.connect.row_factory = dict_factory
@@ -150,18 +150,12 @@ class mendeleyRescue:
                          for a in archivos if not a["file_path"] == ""]
         return listaArchivos
 
-    def fileArchive(self, dicPaths):
-        self.connect.execute(
-            """
-            UPDATE Files SET localUrl = REPLACE(localUrl, :oldPath, :newPath)
-            WHERE localUrl LIKE :oldPath;
-            """)
-
     def update_titles(self):
+        symbolInitial = ["'", "(", "[", "{", '"', " ", ".", "¿", "¡", "\u201c"]
         all_docs = self.listDocs()
         updated_title = {"title": "", "id": None}
         for doc in all_docs:
-            if doc["title"][0] in ["'", "(", "[", "{", '"', " ", ".", "¿", "¡", "\u201c"]:
+            if doc["title"][0] in symbolInitial:
                 updated_title.update({"title": doc["title"][0] + doc["title"][1].capitalize() +
                                                doc["title"][2:].lower(), "id": doc["id"]})
             else:
@@ -169,15 +163,20 @@ class mendeleyRescue:
             self.connect.execute("UPDATE Documents SET title =:title WHERE id = :id ", updated_title)
         self.connect.commit()
 
+    def fileArchive(self, dicPaths):
+        self.connect.execute(
+            """
+            UPDATE Files SET localUrl = REPLACE(localUrl, '{oldPath}', '{newPath}')
+            WHERE localUrl LIKE '%{oldPath}%';
+            """.format(**dicPaths))
+        self.connect.commit()
+
     def close(self):
         self.connect.commit()
         self.connect.close()
 
 
-
-
-
-# %% Main ---------------
+#%% Main ---------------
 mendeley = mendeleyRescue()
 conecta_bd = mendeley.connect
 mendeley.mendeley_schema()
@@ -192,13 +191,12 @@ with open("Mendeley_documentos_descargados.txt", "w", encoding="utf-8") as f:
     f.writelines(["Los documentos están almacenados en:\n", "-"*37, "\n"])
     for d in simp_arch_dir:
         f.writelines([d, "\n"])
-        print("file:///" + simp_arch_dir[0].replace(" ", "%20"))
 
     f.writelines(["\n\nLista de documentos descargados:\n", "-"*32, "\n"])
     for doc in listaArchivos:
         f.writelines([doc["file"], "\n"])
 
-# %% Lista de autores
+#%% Lista de autores
 listaAutores = mendeley.autores()
 listaAutores.sort()
 
@@ -213,7 +211,7 @@ with open("Mendeley_lista_autores.txt", "w", encoding="utf-8") as f:
     for a in listaAutores:
         f.writelines([a.strip(), "\n"])
 
-# %% Lista de documentos en Mendeley
+#%% Lista de documentos en Mendeley
 documentos = mendeley.listDocs()
 # Archivo con la lista de todos los documentos
 with open("Mendeley_todos_los_titulos.txt", "w", encoding="utf-8") as f:
@@ -228,7 +226,7 @@ with open("Mendeley_todos_los_titulos.txt", "w", encoding="utf-8") as f:
         line = "{:5d}:, {:10d}, {:.60}, {:6}, {:5}\n".format(i, d["id"], d["title"], d["year"], d["deletionPending"])
         f.write(line)
 
-# %% Distribución de documentos entre los grupos y "My library"
+#%% Distribución de documentos entre los grupos y "My library"
 num_docs_grp = mendeley.numDocs()
 with open("Mendeley_duplicados.txt", "w") as f:
     f.write("Número de documentos en la BD de Mendeley\n")
@@ -238,7 +236,7 @@ with open("Mendeley_duplicados.txt", "w") as f:
         f.write("{:10}  {:5}  {:15}\n".format(d["entries"], d["gr"], d["gr_name"]))
     f.write("{:<50}\n".format("-" * 50))
 
-# %% Análisis de duplicados
+#%% Análisis de duplicados
 lista_duplicados = mendeley.dups(grupo=0)
 
 total = sum([r["entries"] for r in lista_duplicados])
@@ -251,7 +249,7 @@ with open("Mendeley_duplicados.txt", "a") as f:
     for d in lista_duplicados:
         f.write("{entries}: {title:_<80.80} ({year})\n".format(**d))
 
-# %% Documentos en el grupo seleccionado
+#%% Documentos en el grupo seleccionado
 titulos = mendeley.doc_grupo(grupo=0)
 grupo = titulos[0]["grp_name"]
 if grupo == "":
@@ -265,8 +263,21 @@ with open("Mendeley_docs_en_{}.txt".format(grupo), "wb") as f:
         i += 1
         f.write("{:>4}: {: <120.120}\n".format(i, conjunciones_minuscula(titulo["title"])).encode("utf-8"))
 
-#%% Update
-#mendeley.update_titles()
+#%% Update directory to hold file archive
+listaArchivos = mendeley.archivos()
+simp_arch_dir = list(set([f["dir"] for f in listaArchivos]))
+dirs = {}
+if len(dirs) > 1:
+    for f in simp_arch_dir:
+        if not "AppData" in f:
+            dirs = {"newPath": f.replace(" ", "%20"), "oldPath": ""}
+        else:
+            dirs["oldPath"] = f.replace(" ", "%20")
+
+    mendeley.fileArchive(dirs)
+
+#%% Actualización de los títulos para usar minúsculas con inicial mayúscula
+mendeley.update_titles()
 
 #%% Finish processing
 mendeley.close()
