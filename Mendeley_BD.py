@@ -209,11 +209,14 @@ if __name__ == '__main__':
     commLine.add_argument("-S", "--schema", help="Get Mendeley's DB schema",
                           required=False, action="store_true")
     commLine.add_argument("-g", "--group", help="Collection of documents in specified group",
-                          required=False, type=str)
-    commLine.add_argument("-O", "--old", help="Segment of old download location to be replaced",
-                          required=False, type=str)
-    commLine.add_argument("-N", "--new", help="New download location segment to be replaced in old location",
-                          required=False, type=str)
+                          required=False, type=str, metavar="x")
+
+    updateGroup = commLine.add_argument_group("Update PDF download directory",
+                                              description="Provide both <old> and <new> values:")
+    updateGroup.add_argument("-O", "--old", help="Segment of old download location to be replaced",
+                          required=False, type=str, metavar="s")
+    updateGroup.add_argument("-N", "--new", help="New download location segment to be replaced in old location",
+                          required=False, type=str, metavar="s")
     args = commLine.parse_args()
 
 #%% Connect Mendeley data base
@@ -232,11 +235,13 @@ if __name__ == '__main__':
             f.writelines(["Missing downloaded files with a reported link in Mendeley\n", "*"*57, "\n\n",
                           "{id:>10} {title:^80}   {note:<25} \n".format(id="id", title="title", note="note"),
                           "-"*120, "\n"])
-
-            for mf in missingFiles:
-                if mf["note"] == None:
-                    mf["note"] = " "
-                f.write("{id:10}  {title:_<80.80}  {note:15.25}\n".format(**mf))
+            if missingFiles:
+                for mf in missingFiles:
+                    if mf["note"] == None:
+                        mf["note"] = " "
+                    f.write("{id:10}  {title:_<80.80}  {note:15.25}\n".format(**mf))
+            else:
+                f.write("No missing links were found, all PDFs accounted for.\n".center(120))
 
 #%% Lista de documentos descargados
     if args.download:
