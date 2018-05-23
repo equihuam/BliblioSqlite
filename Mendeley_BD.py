@@ -157,7 +157,8 @@ class mendeleyRescue:
             FROM RemoteDocuments
                 LEFT JOIN DocumentFiles ON RemoteDocuments.documentId = DocumentFiles.documentId
                 LEFT JOIN Documents ON Documents.id = RemoteDocuments.documentId
-            WHERE DocumentFiles.remoteFileUuid = "";
+            WHERE DocumentFiles.remoteFileUuid = ""
+            ORDER BY Documents.title;
             """)
 
         filesList = [{"id": a["id"], "title": a["title"], "note": a["note"]} for a in files]
