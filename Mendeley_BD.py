@@ -194,21 +194,21 @@ class mendeleyRescue:
 if __name__ == '__main__':
 # %% Main ---------------
     commLine = argparse.ArgumentParser(description="Diagnostics and general maintenance of Mendeley database")
-    commLine.add_argument("-D", "--download", help="Collection of downloaded documents",
+    commLine.add_argument("-W", "--download", help="Collection of downloaded documents",
                           required=False, action="store_true")
     commLine.add_argument("-A", "--authors", help="List of contributors in document collection",
                           required=False, action="store_true")
     commLine.add_argument("-F", "--full", help="List of all references in the collection",
                           required=False, action="store_true")
-    commLine.add_argument("-P", "--duplicates", help="References among groups and potential duplicates",
-                          required=False, action="store_true")
+    commLine.add_argument("-D", "--duplicates", help="Possible duplicated references in my library (or id group)",
+                          required=False, type=str, metavar="x")
     commLine.add_argument("-T", "--titles", help="Apply single rule to reference title: currently only upper initial",
                           required=False, action="store_true")
     commLine.add_argument("-M", "--missing", help="List of missing files",
                           required=False, action="store_true")
     commLine.add_argument("-S", "--schema", help="Get Mendeley's DB schema",
                           required=False, action="store_true")
-    commLine.add_argument("-g", "--group", help="Collection of documents in specified group",
+    commLine.add_argument("-G", "--group", help="Collection of documents in specified group (by id number)",
                           required=False, type=str, metavar="x")
 
     updateGroup = commLine.add_argument_group("Update PDF download directory",
@@ -294,8 +294,8 @@ if __name__ == '__main__':
 #%% Identificación de posibles duplicados y Distribución de documentos entre los grupos (incluida "My library")
     if args.duplicates:
         num_docs_grp = mendeley.numDocs()
-        with open("Mendeley_duplicados.txt", "w") as f:
-            f.write("Número de documentos en la BD de Mendeley\n")
+        with open("Mendeley_dups.txt", "w") as f:
+            f.write("Number of references in Mendeley database\n")
             f.write("{:10}  {:5}  {:15}\n".format("Num docs", "gr_id", "gr_name"))
             f.write("{:<50}\n".format("-" * 50))
             for d in num_docs_grp:
@@ -303,15 +303,21 @@ if __name__ == '__main__':
             f.write("{:<50}\n".format("-" * 50))
 
         # Análisis de duplicados
-        lista_duplicados = mendeley.dups(grupo=0)
+        try:
+            grupo = int(args.duplicates)
+        except ValueError:
+            print("Group id should be an integer")
+            grupo = 0
+
+        lista_duplicados = mendeley.dups(grupo=grupo)
 
         total = sum([r["entries"] for r in lista_duplicados])
         grupo = lista_duplicados[0]["gr_name"]
         if grupo is "":  # Si no hay grupo el documento es de "mi colección"
             grupo = "My library"
 
-        with open("Mendeley_duplicados.txt", "a") as f:
-            f.write("\nEl total de duplicados en el grupo '{}' es = {}\n\n\n".format(grupo, total))
+        with open("Mendeley_dups.txt", "a") as f:
+            f.write("\nTotal duplicates in group '{}': {}\n\n\n".format(grupo, total))
             for d in lista_duplicados:
                 f.write("{entries}: {title:_<80.80} ({year})\n".format(**d))
 
@@ -322,7 +328,7 @@ if __name__ == '__main__':
         if grupo == "":
             grupo = "My library"
         with open("Mendeley_docs_en_{}.txt".format(grupo), "wb") as f:
-            linea = " ".join(["Documentos en el grupo '{grupo}'\n".format(grupo=grupo),
+            linea = " ".join(["Refereneces found in group '{grupo}'\n".format(grupo=grupo),
                               u"*" * 40, u"\n"]).encode("utf-8")
             f.write(linea)
             i = 0
